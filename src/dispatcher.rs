@@ -1,9 +1,8 @@
 //! Dispatcher for routing of all message backends.
 use std::cell::Cell;
 use std::os::raw::c_char;
-use Backend;
-use Composer;
-use Msg;
+use failure::Error;
+use {Backend, Composer, Msg};
 
 pub struct Dispatcher {
     composer: Box<Composer>,
@@ -52,20 +51,21 @@ impl Composer for DefaultComposer {
     fn name(&self) -> &'static str {
         "composer.default"
     }
-    fn compose(&self, msg: Msg) -> String {
-        match msg {
+    fn compose(&self, msg: Msg) -> Result<String, Error> {
+        let rv = match msg {
             Msg::Text(content) => content,
             Msg::Compound(segs) => {
                 let mut rv = String::new();
                 for seg in segs {
-                    rv.push_str(&self.compose(seg));
+                    rv.push_str(&self.compose(seg)?);
                 }
                 rv
             },
             _ => String::new(),
-        }
+        };
+        Ok(rv)
     }
-    fn decompose(&self, raw: String) -> Msg {
-        Msg::Text(raw.to_owned())
+    fn decompose(&self, raw: String) -> Result<Msg, Error> {
+        Ok(Msg::Text(raw.to_owned()))
     }
 }

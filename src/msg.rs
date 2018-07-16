@@ -183,10 +183,13 @@ impl ExtBuilder {
             params: BTreeMap::new(),
         }
     }
-    pub fn with_param(mut self, key: &str, value: &str) -> Self {
+    pub fn add_param(&mut self, key: &str, value: &str) {
         self.params
             .entry(key.to_owned())
             .or_insert(value.to_owned());
+    }
+    pub fn with_param(mut self, key: &str, value: &str) -> Self {
+        self.add_param(key, value);
         self
     }
     pub fn build(self) -> Msg {
@@ -221,7 +224,7 @@ impl CompoundBuilder {
     pub fn new() -> CompoundBuilder {
         CompoundBuilder(Vec::new())
     }
-    pub fn with_msg(mut self, msg: Msg) -> Self {
+    pub fn add_msg(&mut self, msg: Msg) {
         match msg {
             Msg::Text(content) => {
                 if let Some((Msg::Text(last), _)) = self.0.split_last_mut() {
@@ -233,6 +236,9 @@ impl CompoundBuilder {
             Msg::Compound(mut segs) => self.0.append(&mut segs),
             _ => self.0.push(msg),
         }
+    }
+    pub fn with_msg(mut self, msg: Msg) -> Self {
+        self.add_msg(msg);
         self
     }
     pub fn build(self) -> Msg {

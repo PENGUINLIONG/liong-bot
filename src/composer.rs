@@ -1,7 +1,8 @@
 use super::Msg;
+use failure::Error;
 
 pub trait Composer {
     fn name(&self) -> &'static str;
-    fn compose(&self, msg: Msg) -> String;
-    fn decompose(&self, raw: String) -> Msg;
+    fn compose(&self, msg: Msg) -> Result<String, Error>;
+    fn decompose(&self, raw: String) -> Result<Msg, Error>;
 }

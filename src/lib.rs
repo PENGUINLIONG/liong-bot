@@ -13,6 +13,7 @@ mod backend;
 mod composer;
 mod dispatcher;
 mod msg;
+mod peripheral;
 pub mod sys;
 
 use backend::Backend;
