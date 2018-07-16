@@ -2,7 +2,7 @@ use std::path::{Path, PathBuf};
 use std::collections::BTreeMap;
 use failure::{err_msg, Error};
 
-#[derive(Clone, Eq, PartialEq)]
+#[derive(Clone, Debug, Eq, PartialEq)]
 pub enum Msg {
     Text(String),
     Compound(Vec<Msg>),
@@ -128,14 +128,13 @@ impl Msg {
                             str_out.push('{');
                             str_out.push('{');
                         },
-                        c => str_out.push(c),
                         '}' => {
                             str_out.push('}');
                             str_out.push('}');
                         },
+                        c => str_out.push(c),
                     }
                 }
-                str_out.push_str(content);
             },
             Msg::Compound(ref segs) => {
                 for seg in segs {
@@ -146,6 +145,7 @@ impl Msg {
                 str_out.push('{');
                 str_out.push_str(&msg_count.to_string());
                 str_out.push('}');
+                msg_out.push(ext.clone());
                 *msg_count += 1;
             },
         }
@@ -165,36 +165,10 @@ impl Msg {
             _ => ("{0}".to_owned(), vec![ self.clone() ]),
         }
     }
-    pub fn text(text: &str) -> Msg {
-        Msg::Text(text.to_string())
-    }
-    pub fn at(qq: i64) -> Msg {
-        ExtBuilder::new("at")
-            .with_param("qq", &qq.to_string())
-            .build()
-    }
-    pub fn image(path: &Path) -> Msg {
-        ExtBuilder::new("image")
-            .with_param("file", &path.to_string_lossy())
-            .build()
-    }
-    pub fn record(path: &Path) -> Msg {
-        ExtBuilder::new("record")
-            .with_param("file", &path.to_string_lossy())
-            .build()
-    }
 }
 impl<T> From<T> for Msg where T: 'static  + AsRef<str> {
     fn from(x: T) -> Msg {
         Msg::Text(x.as_ref().to_owned())
-    }
-}
-
-macro_rules! msg {
-    ( $( $msg: expr ),* ) => {
-        let mut rv = Vec::new();
-        $( rv.push($msg); )*
-        Msg::Compound(rv)
     }
 }
 
@@ -223,6 +197,57 @@ impl ExtBuilder {
     }
 }
 
+pub fn text(text: &str) -> Msg {
+    Msg::Text(text.to_string())
+}
+pub fn at(qq: i64) -> Msg {
+    ExtBuilder::new("at")
+        .with_param("qq", &qq.to_string())
+        .build()
+}
+pub fn image(path: &Path) -> Msg {
+    ExtBuilder::new("image")
+        .with_param("file", &path.to_string_lossy())
+        .build()
+}
+pub fn record(path: &Path) -> Msg {
+    ExtBuilder::new("record")
+        .with_param("file", &path.to_string_lossy())
+        .build()
+}
+
+pub struct CompoundBuilder(Vec<Msg>);
+impl CompoundBuilder {
+    pub fn new() -> CompoundBuilder {
+        CompoundBuilder(Vec::new())
+    }
+    pub fn with_msg(mut self, msg: Msg) -> Self {
+        match msg {
+            Msg::Text(content) => {
+                if let Some((Msg::Text(last), _)) = self.0.split_last_mut() {
+                    last.push_str(&content);
+                } else {
+                    self.0.push(Msg::Text(content));
+                }
+            },
+            Msg::Compound(mut segs) => self.0.append(&mut segs),
+            _ => self.0.push(msg),
+        }
+        self
+    }
+    pub fn build(self) -> Msg {
+        Msg::Compound(self.0)
+    }
+}
+
+macro_rules! msg {
+    ( $($msg: expr),* ) => {{
+        let mut rv = CompoundBuilder::new();
+        $( rv = rv.with_msg(Msg::from($msg)); )*
+        rv.build()
+    }}
+}
+
 pub enum MsgIn {
     Private {
         qq: i64,
@@ -240,7 +265,63 @@ pub enum MsgIn {
 
 #[cfg(test)]
 mod tests {
+    use super::*;
+    #[test]
+    fn test_shortcut() {
+        assert_eq!(
+            text("123"),
+            Msg::Text("123".to_string()),
+        );
+        assert_eq!(
+            at(123),
+            ExtBuilder::new("at")
+                .with_param("qq", "123")
+                .build(),
+        );
+        assert_eq!(
+            image(&Path::new("./image.jpg")),
+            ExtBuilder::new("image")
+                .with_param("file", "./image.jpg")
+                .build(),
+        );
+        assert_eq!(
+            record(&Path::new("./record.silk")),
+            ExtBuilder::new("record")
+                .with_param("file", "./record.silk")
+                .build(),
+        );
+    }
     #[test]
     fn test_construct() {
+        let text_msg = text("123");
+        let text_construct = Msg::construct("{0}", &vec![text_msg.clone()]);
+        assert_eq!(text_msg, text_construct.unwrap());
+        let ext_msg = at(123);
+        let ext_construct = Msg::construct("{0}", &vec![ext_msg.clone()]);
+        assert_eq!(ext_msg, ext_construct.unwrap());
+        let cpd_msg = msg!["123123", ext_msg.clone()];
+        let cpd_construct = Msg::construct("123{0}{1}",
+                                           &vec![text_msg, ext_msg]);
+        assert_eq!(cpd_msg, cpd_construct.unwrap());
+    }
+    #[test]
+    fn test_destruct() {
+        let (fmt, msgs) = msg!["123", at(123), "456", at(456)].destruct();
+        assert_eq!(fmt, "123{0}456{1}");
+        assert_eq!(msgs, vec![at(123), at(456)]);
+        let (fmt, msgs) = at(123).destruct();
+        assert_eq!(fmt, "{0}");
+        assert_eq!(msgs, vec![at(123)]);
+        let (fmt, msgs) = text("123").destruct();
+        assert_eq!(fmt, "123");
+        assert_eq!(msgs, Vec::new());
+    }
+    #[test]
+    fn test_escape() {
+        let (fmt, _) = msg!["{{}", at(123), "}}{"].destruct();
+        assert_eq!(fmt, "{{{{}}{0}}}}}{{");
+
+        let msg = Msg::construct("{{{0}}}", &vec![at(123)]);
+        assert_eq!(msg.unwrap(), msg!["{", at(123), "}"]);
     }
 }
