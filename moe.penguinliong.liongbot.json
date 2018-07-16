@@ -1,0 +1,60 @@
+{
+    "ret": 1,
+    "apiver": 9,
+    "appid": "moe.penguinliong.liongbot",
+    "name": "LiongBot",
+    "version": "0.0.1",
+    "version_id": 1,
+    "author": "PENGUINLIONG",
+    "description": "LiongBot",
+    "event": [
+        {
+            "id": 1,
+            "type": 21,
+            "name": "Receive private message",
+            "function": "native_on_recv_priv",
+            "priority": 30000
+        },
+        {
+            "id": 2,
+            "type": 2,
+            "name": "Receive group message",
+            "function": "native_on_recv_grp",
+            "priority": 30000
+        },
+        {
+            "id": 1001,
+            "type": 1001,
+            "name": "Launch event",
+            "function": "native_launch",
+            "priority": 30000
+        },
+        {
+            "id": 1002,
+            "type": 1002,
+            "name": "Shutdown event",
+            "function": "native_shutdown",
+            "priority": 30000
+        },
+        {
+            "id": 1003,
+            "type": 1003,
+            "name": "App enabled event",
+            "function": "native_enable",
+            "priority": 30000
+        },
+        {
+            "id": 1004,
+            "type": 1004,
+            "name": "App disabled event",
+            "priority": 30000,
+            "function": "native_disable"
+        }
+    ],
+    "auth": [
+        101,
+        106,
+        130,
+        131
+    ]
+}

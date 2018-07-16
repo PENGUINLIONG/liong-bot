@@ -1,3 +1,5 @@
 Cargo.lock
 /target
+/lib
 **/*.rs.bk
+/.vscode
