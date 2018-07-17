@@ -2,7 +2,7 @@
 use std::cell::Cell;
 use std::os::raw::c_char;
 use failure::Error;
-use {Backend, Composer, Msg};
+use {Backend, Composer, Msg, MsgIn};
 
 pub struct Dispatcher {
     composer: Box<Composer>,
@@ -31,18 +31,31 @@ impl Dispatcher {
         self.enabled.set(false);
     }
 
-    pub fn with_composer<C>(&mut self, composer: C) -> &mut Dispatcher
+    pub fn composer(&self) -> &Composer {
+        &*self.composer
+    }
+
+    pub fn use_composer<C>(&mut self, composer: C) -> &mut Dispatcher
             where C: 'static + Composer {
         self.composer = Box::new(composer);
         self
     }
-    pub fn with_backend<B>(&mut self, backend: B, priority: i32)
+    pub fn use_backend<B>(&mut self, backend: B, priority: i32)
             -> &mut Dispatcher where B: 'static + Backend {
         self.backends.push(Box::new(backend));
         self
     }
-    pub fn forward_priv(&self, qq: i64, raw: &str) {
-        // TODO: Implement.
+    pub fn dispatch(&self, msg_in: MsgIn) -> Option<Msg> {
+        let is_priv = msg_in.is_priv();
+        for backend in self.backends.iter() {
+            if backend.preview(&msg_in) {
+                match backend.process(&msg_in) {
+                    Ok(msg) => return Some(msg),
+                    _ => continue,
+                }
+            }
+        }
+        None
     }
 }
 

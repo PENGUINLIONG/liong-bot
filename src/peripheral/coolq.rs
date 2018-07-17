@@ -40,7 +40,7 @@ pub struct CoolQComposer {
     data_dir: PathBuf,
 }
 impl CoolQComposer {
-    fn new<T>(data_dir: &T) -> CoolQComposer
+    pub fn new<T>(data_dir: &T) -> CoolQComposer
             where T: ?Sized + AsRef<Path> {
         let mut data_dir = data_dir.as_ref().to_owned();
         data_dir.push("data");

@@ -165,6 +165,21 @@ impl Msg {
             _ => ("{0}".to_owned(), vec![ self.clone() ]),
         }
     }
+    pub fn starts_with<P>(&self, pat: &P) -> bool
+            where P: ?Sized + AsRef<str> {
+        // FIXME: Use `Pattern<'a>` when it's stablized.
+        match self {
+            Msg::Text(ref content) => content.starts_with(pat.as_ref()),
+            Msg::Compound(ref segs) => {
+                if let Some(ref msg) = segs.get(0) {
+                    msg.starts_with(pat)
+                } else {
+                    "".starts_with(pat.as_ref())
+                }
+            },
+            _ => "".starts_with(pat.as_ref()),
+        }
+    }
 }
 impl<T> From<T> for Msg where T: 'static  + AsRef<str> {
     fn from(x: T) -> Msg {
@@ -269,14 +284,30 @@ pub enum MsgIn {
     Private {
         qq: i64,
         alias: String,
-        content: String,
+        content: Msg,
     },
     Group {
         grp: i64,
         qq: i64,
         alias: String,
         grp_alias: String,
-        content: String,
+        content: Msg,
+    }
+}
+impl MsgIn {
+    pub fn is_priv(&self) -> bool {
+        if let MsgIn::Private { .. } = self {
+            true
+        } else {
+            false
+        }
+    }
+    pub fn is_grp(&self) -> bool {
+        if let MsgIn::Group { .. } = self {
+            true
+        } else {
+            false
+        }
     }
 }
 
@@ -340,5 +371,15 @@ mod tests {
 
         let msg = Msg::construct("{{{0}}}", &vec![at(123)]);
         assert_eq!(msg.unwrap(), msg!["{", at(123), "}"]);
+    }
+    #[test]
+    fn test_starts_with() {
+        assert_eq!(empty().starts_with(""), true);
+        assert_eq!(empty().starts_with("123"), false);
+        assert_eq!(text("123").starts_with(""), true);
+        assert_eq!(at(1).starts_with(""), true);
+        assert_eq!(at(1).starts_with("1"), false);
+        assert_eq!(msg!["123", at(1)].starts_with("123"), true);
+        assert_eq!(msg!["123", at(1)].starts_with("122"), false);
     }
 }

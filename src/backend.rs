@@ -1,4 +1,5 @@
-use super::Msg;
+use {Msg, MsgIn};
+use failure::Error;
 
 pub struct BackendMetadata {
     pub identity: &'static str,
@@ -10,7 +11,7 @@ pub struct BackendMetadata {
 
 pub trait Backend {
     fn metadata(&self) -> BackendMetadata;
-    fn preview(&self, msg: Msg) -> Msg;
+    fn preview(&self, msg_in: &MsgIn) -> bool;
     /// Process message and give a response.
-    fn process(&self, msg: Msg) -> Msg;
+    fn process(&self, msg_in: &MsgIn) -> Result<Msg, Error>;
 }

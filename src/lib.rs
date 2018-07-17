@@ -1,6 +1,6 @@
 extern crate base64;
 extern crate bytes;
-extern crate encoding;
+extern crate encoding_rs;
 #[macro_use]
 extern crate serde;
 extern crate serde_json;
@@ -20,7 +20,7 @@ pub mod sys;
 use backend::Backend;
 use composer::Composer;
 use dispatcher::Dispatcher;
-use msg::Msg;
+use msg::{Msg, MsgIn};
 
 pub fn on_launch() {
 }
@@ -28,9 +28,9 @@ pub fn on_shutdown() {
 
 }
 pub fn on_configure(dispatcher: &mut Dispatcher) {
+    use peripheral::coolq::CoolQComposer;
 
-}
-pub fn on_recv_priv(qq: i64, raw: &str) {
-}
-pub fn on_recv_grp(grp: i64, qq: i64, raw: &str) {
+    let local = std::env::current_dir().unwrap();
+    dispatcher
+        .use_composer(CoolQComposer::new(&local));
 }
