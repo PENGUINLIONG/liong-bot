@@ -3,3 +3,4 @@ Cargo.lock
 /lib
 **/*.rs.bk
 /.vscode
+.env
