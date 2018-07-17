@@ -51,10 +51,10 @@ impl Composer for DefaultComposer {
     fn name(&self) -> &'static str {
         "composer.default"
     }
-    fn compose(&self, msg: Msg) -> Result<String, Error> {
+    fn compose(&self, msg: &Msg) -> Result<String, Error> {
         let rv = match msg {
-            Msg::Text(content) => content,
-            Msg::Compound(segs) => {
+            Msg::Text(ref content) => content.to_owned(),
+            Msg::Compound(ref segs) => {
                 let mut rv = String::new();
                 for seg in segs {
                     rv.push_str(&self.compose(seg)?);
@@ -65,7 +65,7 @@ impl Composer for DefaultComposer {
         };
         Ok(rv)
     }
-    fn decompose(&self, raw: String) -> Result<Msg, Error> {
-        Ok(Msg::Text(raw.to_owned()))
+    fn decompose(&self, raw: &str) -> Result<Msg, Error> {
+        Ok(::msg::text(raw))
     }
 }

@@ -12,6 +12,7 @@ extern crate failure;
 mod backend;
 mod composer;
 mod dispatcher;
+#[macro_use]
 mod msg;
 mod peripheral;
 pub mod sys;

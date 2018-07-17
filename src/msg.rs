@@ -177,18 +177,21 @@ pub struct ExtBuilder {
     params: BTreeMap<String, String>,
 }
 impl ExtBuilder {
-    pub fn new(name: &str) -> ExtBuilder {
+    pub fn new<S>(name: &S) -> ExtBuilder
+            where S: ?Sized + ToString {
         ExtBuilder {
-            name: name.to_owned(),
+            name: name.to_string(),
             params: BTreeMap::new(),
         }
     }
-    pub fn add_param(&mut self, key: &str, value: &str) {
+    pub fn add_param<K, V>(&mut self, key: &K, value: &V)
+            where K: ?Sized + ToString, V: ?Sized + ToString {
         self.params
-            .entry(key.to_owned())
-            .or_insert(value.to_owned());
+            .entry(key.to_string())
+            .or_insert(value.to_string());
     }
-    pub fn with_param(mut self, key: &str, value: &str) -> Self {
+    pub fn with_param<K, V>(mut self, key: &K, value: &V) -> Self
+            where K: ?Sized + ToString, V: ?Sized + ToString {
         self.add_param(key, value);
         self
     }
@@ -200,6 +203,9 @@ impl ExtBuilder {
     }
 }
 
+pub fn empty() -> Msg {
+    Msg::Text(String::new())
+}
 pub fn text(text: &str) -> Msg {
     Msg::Text(text.to_string())
 }
@@ -208,21 +214,21 @@ pub fn at(qq: i64) -> Msg {
         .with_param("qq", &qq.to_string())
         .build()
 }
-pub fn image(path: &Path) -> Msg {
+pub fn image<P: ?Sized + AsRef<Path>>(path: &P) -> Msg {
     ExtBuilder::new("image")
-        .with_param("file", &path.to_string_lossy())
+        .with_param("file", &path.as_ref().to_string_lossy())
         .build()
 }
-pub fn record(path: &Path) -> Msg {
+pub fn record<P: ?Sized + AsRef<Path>>(path: &P) -> Msg {
     ExtBuilder::new("record")
-        .with_param("file", &path.to_string_lossy())
+        .with_param("file", &path.as_ref().to_string_lossy())
         .build()
 }
 
-pub struct CompoundBuilder(Vec<Msg>);
-impl CompoundBuilder {
-    pub fn new() -> CompoundBuilder {
-        CompoundBuilder(Vec::new())
+pub struct MsgBuilder(Vec<Msg>);
+impl MsgBuilder {
+    pub fn new() -> MsgBuilder {
+        MsgBuilder(Vec::new())
     }
     pub fn add_msg(&mut self, msg: Msg) {
         match msg {
@@ -241,14 +247,19 @@ impl CompoundBuilder {
         self.add_msg(msg);
         self
     }
-    pub fn build(self) -> Msg {
-        Msg::Compound(self.0)
+    pub fn build(mut self) -> Msg {
+        match self.0.len() {
+            0 => empty(),
+            1 => self.0.pop().unwrap(),
+            _ => Msg::Compound(self.0),
+        }
     }
 }
 
+#[macro_export]
 macro_rules! msg {
     ( $($msg: expr),* ) => {{
-        let mut rv = CompoundBuilder::new();
+        let mut rv = MsgBuilder::new();
         $( rv = rv.with_msg(Msg::from($msg)); )*
         rv.build()
     }}
